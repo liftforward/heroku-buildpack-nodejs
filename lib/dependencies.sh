@@ -137,7 +137,7 @@ yarn_node_modules() {
 
   echo "Installing node modules (yarn.lock)"
   cd "$build_dir" || return
-  monitor "yarn-install" yarn install --production="$production" --frozen-lockfile --ignore-engines 2>&1
+  monitor "yarn-install" yarn install --production="$production" --frozen-lockfile --ignore-engines --network-concurrency 1 2>&1
 }
 
 yarn_2_install() {
