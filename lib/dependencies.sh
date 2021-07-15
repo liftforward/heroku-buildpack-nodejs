@@ -36,9 +36,9 @@ run_if_present() {
     else
       echo "Running $script_name"
       monitor "${script_name}-script" npm run "$script_name" --if-present
+      fi
     fi
-  fi
-}
+  }
 
 run_build_if_present() {
   local build_dir=${1:-}
@@ -72,41 +72,27 @@ run_build_if_present() {
         monitor "${script_name}-script" npm run "$script_name" --if-present -- "$NODE_BUILD_FLAGS"
       else
         monitor "${script_name}-script" npm run "$script_name" --if-present
+        fi
+        fi
       fi
+    }
+
+  run_prebuild_script() {
+    local build_dir=${1:-}
+    local has_heroku_prebuild_script
+
+    has_heroku_prebuild_script=$(has_script "$build_dir/package.json" "heroku-prebuild")
+
+    if [[ "$has_heroku_prebuild_script" == "true" ]]; then
+      mcount "script.heroku-prebuild"
+      header "Prebuild"
+      run_if_present "$build_dir" 'heroku-prebuild'
     fi
-  fi
-}
-
-run_prebuild_script() {
-  local build_dir=${1:-}
-  local has_heroku_prebuild_script
-
-  has_heroku_prebuild_script=$(has_script "$build_dir/package.json" "heroku-prebuild")
-
-  if [[ "$has_heroku_prebuild_script" == "true" ]]; then
-    mcount "script.heroku-prebuild"
-    header "Prebuild"
-    run_if_present "$build_dir" 'heroku-prebuild'
-  fi
-}
+  }
 
 run_build_script() {
   local build_dir=${1:-}
-  local has_build_script has_heroku_build_script
-
-  has_build_script=$(has_script "$build_dir/package.json" "build")
-  has_heroku_build_script=$(has_script "$build_dir/package.json" "heroku-postbuild")
-  if [[ "$has_heroku_build_script" == "true" ]] && [[ "$has_build_script" == "true" ]]; then
-    echo "Detected both \"build\" and \"heroku-postbuild\" scripts"
-    mcount "scripts.heroku-postbuild-and-build"
-    run_if_present "$build_dir" 'heroku-postbuild'
-  elif [[ "$has_heroku_build_script" == "true" ]]; then
-    mcount "scripts.heroku-postbuild"
-    run_if_present "$build_dir" 'heroku-postbuild'
-  elif [[ "$has_build_script" == "true" ]]; then
-    mcount "scripts.build"
-    run_build_if_present "$build_dir" 'build'
-  fi
+  run_build_if_present "$build_dir" 'buildPartner'
 }
 
 run_cleanup_script() {
@@ -287,23 +273,23 @@ npm_prune_devdependencies() {
     meta_set "skipped-prune" "true"
     return 0
   elif [ "$npm_version" == "5.6.0" ] ||
-       [ "$npm_version" == "5.5.1" ] ||
-       [ "$npm_version" == "5.5.0" ] ||
-       [ "$npm_version" == "5.4.2" ] ||
-       [ "$npm_version" == "5.4.1" ] ||
-       [ "$npm_version" == "5.2.0" ] ||
-       [ "$npm_version" == "5.1.0" ]; then
-    mcount "skip-prune-issue-npm-5.6.0"
-    echo "Skipping because npm $npm_version sometimes fails when running 'npm prune' due to a known issue"
-    echo "https://github.com/npm/npm/issues/19356"
-    echo ""
-    echo "You can silence this warning by updating to at least npm 5.7.1 in your package.json"
-    echo "https://devcenter.heroku.com/articles/nodejs-support#specifying-an-npm-version"
-    meta_set "skipped-prune" "true"
-    return 0
-  else
-    cd "$build_dir" || return
-    monitor "npm-prune" npm prune --userconfig "$build_dir/.npmrc" 2>&1
-    meta_set "skipped-prune" "false"
+    [ "$npm_version" == "5.5.1" ] ||
+    [ "$npm_version" == "5.5.0" ] ||
+    [ "$npm_version" == "5.4.2" ] ||
+    [ "$npm_version" == "5.4.1" ] ||
+    [ "$npm_version" == "5.2.0" ] ||
+    [ "$npm_version" == "5.1.0" ]; then
+      mcount "skip-prune-issue-npm-5.6.0"
+      echo "Skipping because npm $npm_version sometimes fails when running 'npm prune' due to a known issue"
+      echo "https://github.com/npm/npm/issues/19356"
+      echo ""
+      echo "You can silence this warning by updating to at least npm 5.7.1 in your package.json"
+      echo "https://devcenter.heroku.com/articles/nodejs-support#specifying-an-npm-version"
+      meta_set "skipped-prune" "true"
+      return 0
+    else
+      cd "$build_dir" || return
+      monitor "npm-prune" npm prune --userconfig "$build_dir/.npmrc" 2>&1
+      meta_set "skipped-prune" "false"
   fi
 }
